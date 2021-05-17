@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="a3947cf4-f23c-4b90-9415-c2c5c0cc654b" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="df3254a0-9283-4b5c-a3f1-161da8886422" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" database="mydb" />
+	</db:config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="69edce01-593f-4257-8694-36950be43f26" />
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="00ac3f82-87cf-4755-bf50-b755014aa3db" >
+		<salesforce:basic-connection username="kumalprabhat@na.com" password="Ethenhunt@1" securityToken="Lud5QlnmhNxImE2KIf6HHOHfn" />
+	</salesforce:sfdc-config>
+	<http:listener-config name="HTTP_Listener_config1" doc:name="HTTP Listener config" doc:id="62f8afdb-43ef-4137-bed1-7dba1cf6a951" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="database-sessionFlow" doc:id="95e95eb2-a37c-4146-b37b-b5c3e5f9dac7" >
+		<http:listener doc:name="DBListener" doc:id="21f8e3bd-ca38-4d81-b83a-590bbd9cefa3" config-ref="HTTP_Listener_config" path="/test" allowedMethods="GET"/>
+		<db:select doc:name="Select" doc:id="6f58d2d8-6213-474e-954b-be75b61c83de" config-ref="Database_Config">
+			<db:sql><![CDATA[SELECT * FROM mydb.emp where id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: attributes.queryParams.id
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="c644e128-7462-4176-a11b-9268661703dd" >
+			<when expression="#[sizeOf(payload)&gt;0]">
+				<ee:transform doc:name="Transform Message" doc:id="f179f27b-da5a-4d64-86fb-a47c9c608855" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="bb9332af-cdfe-4770-abe9-6ba9c4ec750b">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message" : "record not found"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</otherwise>
+		</choice>
+		<file:write doc:name="Write" doc:id="d6559114-7069-4308-8497-a3a2f7a6a1ea" config-ref="File_Config" path="C:\Users\PRABHAT KUMAR PANDIT\OneDrive\Desktop\Mulesoft\data.txt" mode="APPEND"/>
+	</flow>
+	<flow name="database-sessionFlow1" doc:id="20667525-8417-4629-99e8-1985360941d4" >
+		<http:listener doc:name="Listener" doc:id="522d6e1e-34fc-4a43-aeac-37eccdd791b9" config-ref="HTTP_Listener_config1" path="/tests"/>
+		<ee:transform doc:name="Transform Message" doc:id="4febf019-6f18-4475-9571-21dc17e3cbfa" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message" : "this is the out."
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:create doc:name="Create" doc:id="a4a7e942-3280-4c6b-a45b-33f36330c594" config-ref="Salesforce_Config" type="account"/>
+	</flow>
+</mule>
